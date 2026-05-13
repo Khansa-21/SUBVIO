@@ -1,0 +1,43 @@
+import { Router } from "express";
+import { NODE_ENV } from "../config/env.js";
+
+const healthRouter = Router();
+
+healthRouter.get("/", (req, res) => {
+  res.status(200).json({
+    status: "success",
+    message: "Subscription Tracker API is running",
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: NODE_ENV,
+    version: "1.0.0",
+  });
+});
+
+healthRouter.get("/db", async (req, res) => {
+  try {
+    const mongoose = (await import("mongoose")).default;
+    const state = mongoose.connection.readyState;
+
+    const states = {
+      0: "disconnected",
+      1: "connected",
+      2: "connecting",
+      3: "disconnecting",
+    };
+
+    res.status(200).json({
+      status: "success",
+      database: states[state] || "unknown",
+      readyState: state,
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: "error",
+      message: "Database check failed",
+      error: error.message,
+    });
+  }
+});
+
+export default healthRouter;

@@ -1,0 +1,19 @@
+# Environment variables
+.env*
+!.env.example
+
+# Node modules
+node_modules/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+
+# IDE files
+.vscode/
+.idea/
+
+# MongoDB data
+/data

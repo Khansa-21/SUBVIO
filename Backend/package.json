@@ -1,0 +1,34 @@
+{
+  "name": "subscription-tracker",
+  "version": "1.0.0",
+  "main": "app.js",
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon app.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "description": "",
+  "dependencies": {
+    "@arcjet/inspect": "^1.0.0-beta.11",
+    "@arcjet/node": "^1.0.0-beta.11",
+    "@sendgrid/mail": "^8.1.6",
+    "@upstash/workflow": "^0.2.19",
+    "bcryptjs": "^3.0.2",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dayjs": "^1.11.18",
+    "dotenv": "^17.2.1",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongodb": "^6.18.0",
+    "mongoose": "^8.18.0",
+    "nodemailer": "^7.0.6",
+    "nodemon": "^3.1.10",
+    "resend": "^6.9.1",
+    "stripe": "^20.1.0",
+    "validator": "^13.15.26"
+  }
+}

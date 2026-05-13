@@ -1,0 +1,42 @@
+@import "tailwindcss"; /* This loads Tailwind CSS v4 */
+
+@theme {
+  /* These are your BRAND COLORS */
+  --color-primary-600: #2563eb; /* Blue color for buttons, links */
+  --color-primary-700: #1d4ed8; /* Darker blue for hover */
+  /* GRADIENT COLORS */
+  --gradient-primary: linear-gradient(
+    to bottom left,
+    #8b5cf6,
+    #d946ef
+  ); /* Gradient for buttons */
+  --gradient-secondary: linear-gradient(
+    to bottom left,
+    #8f6edb,
+    #cc65db
+  ); /* Gradient for highlights */
+}
+
+@layer components {
+  .btn-primary {
+    /* This creates a REUSABLE button style */
+    background: var(
+      --gradient-primary
+    ); /* Uses the primary color defined in the theme */
+    color: white;
+    padding: 0.5rem 1rem; /* Vertical & horizontal spacing */
+    border-radius: 1rem; /* Rounded corners */
+    font-weight: 500; /* Medium bold text */
+    transition: background-color 0.3s ease; /* Smooth transition for hover effect */
+    cursor: pointer;
+  }
+
+  .btn-primary:hover {
+    background: var(--gradient-secondary); /* Changes color on hover */
+  }
+
+  .text-shadow-fuchsia-500 {
+    /* Custom text shadow utility */
+    text-shadow: 0 0 5px #ec4899; /* Fuchsia shadow */
+  }
+}
