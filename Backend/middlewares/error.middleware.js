@@ -1,9 +1,9 @@
 const errorMiddleware = (err, req, res, next) => {
   if (process.env.NODE_ENV === "development") {
     console.error(err.stack);
-  } // debugging ke liye
+  } 
 
-  let statusCode = err.statusCode || 500;
+  let statusCode = err.statusCode || err.status || 500;
   let message = err.message || "Server Error";
 
   // MongoDB bad ObjectId
@@ -41,6 +41,7 @@ const errorMiddleware = (err, req, res, next) => {
 
   res.status(statusCode).json({
     success: false,
+    message,
     error: message,
   });
 };

@@ -3,26 +3,12 @@ import api from "./api";
 const authService = {
   // Sign up new user
   signup: async (userData) => {
-    const response = await api.post("/auth/sign-up", userData);
-
-    if (response.token) {
-      localStorage.setItem("token", response.token);
-      localStorage.setItem("user", JSON.stringify(response.user));
-    }
-
-    return response;
+    return api.post("/auth/sign-up", userData);
   },
 
   // Login user
   login: async (credentials) => {
-    const response = await api.post("/auth/log-in", credentials);
-
-    if (response.token) {
-      localStorage.setItem("token", response.token);
-      localStorage.setItem("user", JSON.stringify(response.user));
-    }
-
-    return response;
+    return api.post("/auth/log-in", credentials);
   },
 
   // Logout user
@@ -31,10 +17,6 @@ const authService = {
       await api.post("/auth/sign-out");
     } catch (error) {
       console.error("Logout error:", error);
-    } finally {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      window.location.href = "/login";
     }
   },
 
@@ -59,19 +41,19 @@ const authService = {
   },
 
   // Check if authenticated
-  isAuthenticated: () => {
-    return !!localStorage.getItem("token");
+  isAuthenticated: async () => {
+    try {
+      const response = await api.get("/users/me");
+      return !!response.success;
+    } catch (error) {
+      return false;
+    }
   },
 
-  // Get user from localStorage
-  getUser: () => {
-    const user = localStorage.getItem("user");
-    return user ? JSON.parse(user) : null;
-  },
-
-  // Get token from localStorage
-  getToken: () => {
-    return localStorage.getItem("token");
+  // Get user from cookie-backed session
+  getUser: async () => {
+    const response = await api.get("/users/me");
+    return response.data?.user || null;
   },
 };
 

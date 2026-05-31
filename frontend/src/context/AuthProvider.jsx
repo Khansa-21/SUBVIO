@@ -5,57 +5,35 @@ import api from "../services/api.js";
 const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [token, setTokenState] = useState(() => {
-    return localStorage.getItem("token");
-  });
-
-  const setToken = useCallback((newToken) => {
-    if (newToken) {
-      localStorage.setItem("token", newToken);
-    } else {
-      localStorage.removeItem("token");
-    }
-    setTokenState(newToken);
-  }, []);
 
   // Load user on app start
   useEffect(() => {
     const loadUser = async () => {
-      if (token) {
-        try {
-          const response = await api.get("/auth/profile");
+      try {
+        const response = await api.get("/users/me");
 
-          if (response.success) {
-            setUser(response.data);
-          } else {
-            setToken(null);
-          }
-        } catch (error) {
-          console.error("Failed to load user:", error);
-          setToken(null);
+        if (response.success) {
+          setUser(response.data.user);
         }
+      } catch (error) {
+        setUser(null);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     loadUser();
-  }, [token, setToken]);
+  }, []);
 
   // Login function
   const login = async (email, password) => {
     try {
-      const response = await api.post("/auth/login", { email, password });
+      const response = await api.post("/auth/log-in", { email, password });
 
       if (response.success) {
-        const authToken = response.token || response.data?.token;
-
-        if (authToken) {
-          setToken(authToken);
-          setUser(response.data);
-          return { success: true, data: response.data };
-        }
-
-        return { success: false, error: "No token received" };
+        const userData = response.data?.user;
+        setUser(userData);
+        return { success: true, data: userData };
       }
 
       return { success: false, error: response.message || "Login failed" };
@@ -67,22 +45,16 @@ const AuthProvider = ({ children }) => {
   // Register function
   const register = async (name, email, password) => {
     try {
-      const response = await api.post("/auth/signup", {
+      const response = await api.post("/auth/sign-up", {
         name,
         email,
         password,
       });
 
       if (response.success) {
-        const authToken = response.token || response.data?.token;
-
-        if (authToken) {
-          setToken(authToken);
-          setUser(response.data);
-          return { success: true, data: response.data };
-        }
-
-        return { success: false, error: "No token received" };
+        const userData = response.data?.user;
+        setUser(userData);
+        return { success: true, data: userData };
       }
 
       return {
@@ -95,19 +67,25 @@ const AuthProvider = ({ children }) => {
   };
 
   // Logout function
-  const logout = useCallback(() => {
-    setToken(null);
+  const logout = useCallback(async () => {
+    try {
+      await api.post("/auth/sign-out");
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+
     setUser(null);
-  }, [setToken]);
+  }, []);
 
   // Update profile function
   const updateProfile = async (userData) => {
     try {
-      const response = await api.put("/auth/profile", userData);
+      const response = await api.patch("/users/me", userData);
 
       if (response.success) {
-        setUser(response.data);
-        return { success: true, data: response.data };
+        const updatedUser = response.data?.user;
+        setUser(updatedUser);
+        return { success: true, data: updatedUser };
       }
 
       return { success: false, error: response.message };
@@ -119,11 +97,12 @@ const AuthProvider = ({ children }) => {
   // Get user function (refresh)
   const getUser = async () => {
     try {
-      const response = await api.get("/auth/profile");
+      const response = await api.get("/users/me");
 
       if (response.success) {
-        setUser(response.data);
-        return { success: true, data: response.data };
+        const userData = response.data?.user;
+        setUser(userData);
+        return { success: true, data: userData };
       }
 
       return { success: false };
@@ -137,15 +116,14 @@ const AuthProvider = ({ children }) => {
   // Context value
   const value = {
     user,
-    token,
     loading,
     login,
     register,
     logout,
     updateProfile,
     getUser,
-    isAuthenticated: !!token,
-    isAdmin: user?.isAdmin || false,
+    isAuthenticated: !!user,
+    isAdmin: user?.role === "admin",
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

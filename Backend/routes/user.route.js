@@ -1,20 +1,17 @@
 import { Router } from "express";
 import {
-  getUser,
-  getUsers,
-  updateUser,
-  deleteUser,
+  deleteCurrentUser,
+  getCurrentUser,
+  updateCurrentUser,
+  updateCurrentUserPassword,
 } from "../controllers/user.controller.js";
-import authorize from "../middlewares/auth.middleware.js";
-import isAdmin from "../middlewares/admin.middleware.js";
+import { requireAuth } from "../middlewares/auth.middleware.js";
 
 const userRouter = Router();
 
-// Routes
-userRouter.get("/", authorize, isAdmin, getUsers);                           
-userRouter.get("/:id", authorize, getUser);
-userRouter.put("/:id", authorize, updateUser);
-userRouter.delete("/:id", authorize, isAdmin, deleteUser);
+userRouter.get("/me", requireAuth, getCurrentUser);
+userRouter.patch("/me", requireAuth, updateCurrentUser);
+userRouter.patch("/me/password", requireAuth, updateCurrentUserPassword);
+userRouter.delete("/me", requireAuth, deleteCurrentUser);
 
 export default userRouter;
-  

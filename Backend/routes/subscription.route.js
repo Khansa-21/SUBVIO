@@ -1,31 +1,27 @@
 import { Router } from "express";
-import authorize from "../middlewares/auth.middleware.js";
 import {
-  createSubscription,
-  getAllSubscriptions,
-  getUserSubscriptions,
-  getSubscriptionById,
-  updateSubscription,
-  deleteSubscription,
   cancelSubscription,
+  createSubscription,
+  deleteSubscription,
+  exportSubscriptions,
+  getSubscriptionById,
+  getSubscriptions,
   getUpcomingRenewals,
   searchSubscriptions,
-  exportSubscriptions
+  updateSubscription,
 } from "../controllers/subscription.controller.js";
-import isAdmin from "../middlewares/admin.middleware.js";
+import { requireAuth } from "../middlewares/auth.middleware.js";
 
 const subscriptionRouter = Router();
 
-// Routes
-subscriptionRouter.get("/", authorize, isAdmin, getAllSubscriptions);
-subscriptionRouter.post("/", authorize, createSubscription);
-subscriptionRouter.get("/search/filter", authorize, searchSubscriptions);
-subscriptionRouter.get("/export", authorize, exportSubscriptions);
-subscriptionRouter.get("/upcoming", authorize, getUpcomingRenewals);
-subscriptionRouter.get("/:id", authorize, getSubscriptionById);
-subscriptionRouter.put("/:id", authorize, updateSubscription);
-subscriptionRouter.delete("/:id", authorize, isAdmin, deleteSubscription);
-subscriptionRouter.get("/user/:id", authorize, getUserSubscriptions);
-subscriptionRouter.put("/:id/cancel", authorize, cancelSubscription);
+subscriptionRouter.get("/", requireAuth, getSubscriptions);
+subscriptionRouter.post("/", requireAuth, createSubscription);
+subscriptionRouter.get("/search/filter", requireAuth, searchSubscriptions);
+subscriptionRouter.get("/export", requireAuth, exportSubscriptions);
+subscriptionRouter.get("/upcoming", requireAuth, getUpcomingRenewals);
+subscriptionRouter.get("/:id", requireAuth, getSubscriptionById);
+subscriptionRouter.patch("/:id", requireAuth, updateSubscription);
+subscriptionRouter.delete("/:id", requireAuth, deleteSubscription);
+subscriptionRouter.patch("/:id/cancel", requireAuth, cancelSubscription);
 
 export default subscriptionRouter;

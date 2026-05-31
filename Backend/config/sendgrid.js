@@ -1,18 +1,12 @@
-// config/sendgrid.js
 import sgMail from "@sendgrid/mail";
 import { SENDGRID_API_KEY } from "./env.js";
 
-// Check if API key exists
-if (!SENDGRID_API_KEY) {
-  console.warn(
-    "⚠️  WARNING: SENDGRID_API_KEY not found in environment variables",
-  );
-  console.warn(
-    "⚠️  Email functionality will not work until you add it to .env",
-  );
-}
+export const isEmailConfigured = Boolean(SENDGRID_API_KEY);
 
-// Set API key
-sgMail.setApiKey(SENDGRID_API_KEY);
+if (isEmailConfigured) {
+  sgMail.setApiKey(SENDGRID_API_KEY);
+} else {
+  console.warn("SENDGRID_API_KEY not found - email sending is disabled");
+}
 
 export default sgMail;

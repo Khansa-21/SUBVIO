@@ -1,99 +1,122 @@
+import mongoose from "mongoose";
+import bcrypt from "bcryptjs";
+import Subscription from "../models/subscription.model.js";
 import User from "../models/user.model.js";
-// import bcrypt from "bcryptjs";
+import { clearAuthCookie, publicUser } from "../utils/authHelper.js";
+import HttpError from "../utils/httpError.js";
+import {
+  ensureOnlyAllowedFields,
+  normalizeEmail,
+  normalizeString,
+  pickAllowedFields,
+  validatePassword,
+} from "../utils/validator.js";
 
-// ✅ Function that fetches all the users
-export const getUsers = async (req, res, next) => {
+export const getCurrentUser = async (req, res, next) => {
   try {
-    // Access control
-    if (req.user.role !== "admin" && req.user.id !== req.params.id) {
-      return res.status(403).json({ message: "Access denied" });
-    }
-
-    const users = await User.find();
-
     res.status(200).json({
       success: true,
-      data: users,
+      data: { user: publicUser(req.user) },
     });
   } catch (error) {
     next(error);
   }
 };
 
-// ✅ Fetching single user
-export const getUser = async (req, res, next) => {
+export const updateCurrentUser = async (req, res, next) => {
   try {
-    // Access control
-    if (req.user.role !== "admin" && req.user.id !== req.params.id) {
-      return res.status(403).json({ message: "Access denied" });
+    ensureOnlyAllowedFields(req.body, ["name", "email"]);
+
+    const updates = pickAllowedFields(req.body, ["name", "email"]);
+    if (updates.name) {
+      updates.name = normalizeString(updates.name, { maxLength: 30 });
     }
 
-    const user = await User.findById(req.params.id).select("-password");
+    if (updates.email) {
+      updates.email = normalizeEmail(updates.email);
+    }
 
-    // if there is no user
+    const user = await User.findByIdAndUpdate(req.user._id, updates, {
+      new: true,
+      runValidators: true,
+    }).select("-password -resetPasswordToken -resetPasswordExpire");
+
     if (!user) {
-      const error = new Error("User not found");
-      error.statusCode = 404;
-      throw error;
+      throw new HttpError(404, "User not found");
     }
+
     res.status(200).json({
       success: true,
-      data: user,
+      data: { user },
     });
   } catch (error) {
     next(error);
   }
 };
 
-// ✅ Update user (without password update)
-export const updateUser = async (req, res, next) => {
+export const updateCurrentUserPassword = async (req, res, next) => {
   try {
-    // Allow only logged-in user to update their own data
-    if (req.user.id !== req.params.id) {
-      return res.status(403).json({ message: "Access denied" });
+    ensureOnlyAllowedFields(req.body, ["currentPassword", "password"]);
+
+    const { currentPassword, password } = req.body;
+    const validation = validatePassword(password);
+    if (!validation.isValid) {
+      throw new HttpError(400, validation.errors);
     }
 
-    const { name, email } = req.body;
-
-    const updatedUser = await User.findByIdAndUpdate(
-      req.params.id,
-      { name, email },
-      { new: true }
-    ).select("-password");
-
-    if (!updatedUser) {
-      return res.status(404).json({ message: "User not found" });
+    const user = await User.findById(req.user._id).select("+password");
+    if (!user) {
+      throw new HttpError(404, "User not found");
     }
+
+    const isPasswordValid = await bcrypt.compare(
+      currentPassword || "",
+      user.password,
+    );
+
+    if (!isPasswordValid) {
+      throw new HttpError(401, "Current password is incorrect");
+    }
+
+    user.password = await bcrypt.hash(password, 10);
+    await user.save();
 
     res.status(200).json({
       success: true,
-      data: updatedUser,
+      message: "Password updated successfully",
     });
   } catch (error) {
     next(error);
   }
 };
 
-// ✅ Delete user
-export const deleteUser = async (req, res, next) => {
+export const deleteCurrentUser = async (req, res, next) => {
+  let session;
+
   try {
-    if (req.user.id !== req.params.id && req.user.role !== "admin") {
-      return res.status(403).json({ message: "Access denied" });
-    }
+    session = await mongoose.startSession();
+    let user;
 
-    const deletedUser = await User.findByIdAndDelete(req.params.id);
+    await session.withTransaction(async () => {
+      await Subscription.deleteMany({ user: req.user._id }).session(session);
 
-    if (!deletedUser) {
-      const error = new Error("User not found");
-      error.statusCode = 404;
-      throw error;
-    }
+      user = await User.findByIdAndDelete(req.user._id).session(session);
+      if (!user) {
+        throw new HttpError(404, "User not found");
+      }
+    });
+
+    clearAuthCookie(res);
 
     res.status(200).json({
       success: true,
-      message: "User deleted successfully",
+      message: "Account deleted successfully",
     });
   } catch (error) {
     next(error);
+  } finally {
+    if (session) {
+      session.endSession();
+    }
   }
 };

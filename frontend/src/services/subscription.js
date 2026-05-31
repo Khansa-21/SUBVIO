@@ -2,7 +2,7 @@ import api from "./api";
 
 const subscriptionService = {
   // ===========================
-  // GET ALL SUBSCRIPTIONS (Admin only)
+  // GET CURRENT USER'S SUBSCRIPTIONS
   // ===========================
   getAllSubscriptions: async () => {
     const response = await api.get("/subscription");
@@ -12,8 +12,8 @@ const subscriptionService = {
   // ===========================
   // GET USER'S SUBSCRIPTIONS
   // ===========================
-  getUserSubscriptions: async (userId) => {
-    const response = await api.get(`/subscription/user/${userId}`);
+  getUserSubscriptions: async () => {
+    const response = await api.get("/subscription");
     return response;
   },
 
@@ -37,12 +37,12 @@ const subscriptionService = {
   // UPDATE SUBSCRIPTION
   // ===========================
   updateSubscription: async (id, subscriptionData) => {
-    const response = await api.put(`/subscription/${id}`, subscriptionData);
+    const response = await api.patch(`/subscription/${id}`, subscriptionData);
     return response;
   },
 
   // ===========================
-  // DELETE SUBSCRIPTION (Admin only)
+  // DELETE CURRENT USER'S SUBSCRIPTION
   // ===========================
   deleteSubscription: async (id) => {
     const response = await api.delete(`/subscription/${id}`);
@@ -53,7 +53,7 @@ const subscriptionService = {
   // CANCEL SUBSCRIPTION
   // ===========================
   cancelSubscription: async (id) => {
-    const response = await api.put(`/subscription/${id}/cancel`);
+    const response = await api.patch(`/subscription/${id}/cancel`);
     return response;
   },
 

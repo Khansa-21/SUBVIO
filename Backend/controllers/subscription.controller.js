@@ -1,93 +1,141 @@
-import { SERVER_URL } from "../config/env.js";
-import { workflowClient } from "../config/upstash.js";
+import { QSTASH_TOKEN, SERVER_URL } from "../config/env.js";
+import { workflowClient, isWorkflowConfigured } from "../config/upstash.js";
 import Subscription from "../models/subscription.model.js";
-import { sendSubscriptionConfirmation } from "../utils/send-email.js";
 import User from "../models/user.model.js";
+import HttpError from "../utils/httpError.js";
+import { sendSubscriptionConfirmation } from "../utils/send-email.js";
+import {
+  buildSubscriptionPayload,
+  ensurePositivePrice,
+  subscriptionFields,
+} from "../utils/subscriptionPayload.js";
+import {
+  ensureOnlyAllowedFields,
+  escapeRegex,
+  normalizeEnum,
+  normalizeObjectId,
+  normalizeString,
+} from "../utils/validator.js";
 
-// ✅ Create Subscription
+const findOwnSubscription = async (subscriptionId, userId) => {
+  const subscription = await Subscription.findOne({
+    _id: subscriptionId,
+    user: userId,
+  });
+
+  if (!subscription) {
+    throw new HttpError(404, "Subscription not found");
+  }
+
+  return subscription;
+};
+
+const parseQueryNumber = (value, field) => {
+  const parsed = Number(normalizeString(value));
+
+  if (!Number.isFinite(parsed)) {
+    throw new HttpError(400, `${field} must be a valid number`);
+  }
+
+  return parsed;
+};
+
+const parseQueryDate = (value, field) => {
+  const parsed = new Date(normalizeString(value));
+
+  if (Number.isNaN(parsed.getTime())) {
+    throw new HttpError(400, `${field} must be a valid date`);
+  }
+
+  return parsed;
+};
+
+export const getSubscriptions = async (req, res, next) => {
+  try {
+    const subscriptions = await Subscription.find({ user: req.user._id }).sort({
+      renewalDate: 1,
+    });
+
+    res.status(200).json({
+      success: true,
+      data: subscriptions,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const createSubscription = async (req, res, next) => {
   try {
-    const userId = req.user._id;
-    const { name } = req.body;
+    ensureOnlyAllowedFields(req.body, subscriptionFields);
 
-    // if user already have the same subscription
-    const existing = await Subscription.findOne({ user: userId, name });
+    const userId = req.user._id;
+    const payload = buildSubscriptionPayload(req.body);
+    ensurePositivePrice(payload.price);
+
+    const existing = await Subscription.findOne({
+      user: userId,
+      name: payload.name,
+    });
     if (existing) {
-      return res.status(400).json({
-        success: false,
-        message: "Subscription already exists for this user",
-      });
+      throw new HttpError(400, "Subscription already exists for this user");
     }
 
     const subscription = await Subscription.create({
-      ...req.body,
+      ...payload,
       user: userId,
     });
 
-    // 🔥 STEP 1: SEND IMMEDIATE CONFIRMATION EMAIL (ADD THIS)
     try {
-      // Get user details for email
       const user = await User.findById(userId);
 
-      if (user && user.email) {
+      if (user?.email) {
         await sendSubscriptionConfirmation({
           to: user.email,
-          subscription: subscription,
+          subscription,
           userName: user.name,
         });
-        console.log(`📧 Confirmation email sent for ${subscription.name}`);
-      } else {
-        console.warn("⚠️ User not found or no email");
       }
     } catch (emailError) {
-      console.warn(
-        "⚠️ Email failed, but subscription saved:",
-        emailError.message
-      );
-      // Continue even if email fails - don't break the request
+      console.warn("Email failed, but subscription saved:", emailError.message);
     }
 
-    const { workflowRunId } = await workflowClient.trigger({
-      url: `${SERVER_URL}/api/v-1/workflows/subscription/reminder`,
-      body: {
-        subscriptionId: subscription.id,
-      },
-      headers: {
-        "content-type": "application/json",
-      },
-      retries: 0,
-    });
+    let workflowRunId = null;
+    if (isWorkflowConfigured && SERVER_URL) {
+      try {
+        const workflow = await workflowClient.trigger({
+          url: `${SERVER_URL}/api/v-1/workflows/subscription/reminder`,
+          body: {
+            subscriptionId: subscription.id,
+          },
+          headers: {
+            "content-type": "application/json",
+            "x-workflow-token": QSTASH_TOKEN,
+          },
+          retries: 0,
+        });
+        workflowRunId = workflow.workflowRunId;
+      } catch (workflowError) {
+        console.warn(
+          "Reminder workflow failed, but subscription was saved:",
+          workflowError.message,
+        );
+      }
+    }
 
     res.status(201).json({
       success: true,
       data: { subscription, workflowRunId },
     });
-  } catch (err) {
-    next(err);
+  } catch (error) {
+    next(error);
   }
 };
 
-// ✅ Get Single Subscription by ID
 export const getSubscriptionById = async (req, res, next) => {
   try {
-    const subscription = await Subscription.findById(req.params.id).populate(
-      "user",
-      "name email"
-    );
-
-    if (!subscription) {
-      const error = new Error("Subscription not found");
-      error.status = 404;
-      throw error;
-    }
-
-    // ✅ Access control
-    if (
-      req.user.role !== "admin" &&
-      subscription.user._id.toString() !== req.user.id
-    ) {
-      return res.status(403).json({ message: "Access denied" });
-    }
+    const subscriptionId = normalizeObjectId(req.params.id, "subscription id");
+    const subscription = await findOwnSubscription(subscriptionId, req.user._id);
 
     res.status(200).json({
       success: true,
@@ -98,62 +146,46 @@ export const getSubscriptionById = async (req, res, next) => {
   }
 };
 
-// ✅ Update Subscription
 export const updateSubscription = async (req, res, next) => {
   try {
-    // ✅ ONLY NEED THIS VALIDATION: Price check
-    if (req.body.price !== undefined && req.body.price < 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Price cannot be negative",
+    ensureOnlyAllowedFields(req.body, subscriptionFields);
+    const updates = buildSubscriptionPayload(req.body);
+    ensurePositivePrice(updates.price);
+    const subscriptionId = normalizeObjectId(req.params.id, "subscription id");
+
+    if (updates.name !== undefined) {
+      const existing = await Subscription.findOne({
+        _id: { $ne: subscriptionId },
+        user: req.user._id,
+        name: updates.name,
       });
+
+      if (existing) {
+        throw new HttpError(400, "Subscription already exists for this user");
+      }
     }
 
-    // Fetch the subscription
-    const subscription = await Subscription.findById(req.params.id);
-    if (!subscription) {
-      return res.status(404).json({ message: "Subscription not found" });
-    }
+    const subscription = await findOwnSubscription(subscriptionId, req.user._id);
 
-    // Access control (only admin or owner)
-    if (
-      req.user.role !== "admin" &&
-      subscription.user.toString() !== req.user.id
-    ) {
-      return res.status(403).json({ message: "Access denied" });
-    }
+    Object.assign(subscription, updates);
+    await subscription.save();
 
-    //  Update subscription
-    const updated = await Subscription.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true }
-    );
-
-    res.status(200).json({
-      success: true,
-      data: updated,
-    });
+    res.status(200).json({ success: true, data: subscription });
   } catch (error) {
     next(error);
   }
 };
 
-// ✅ Delete Subscription
 export const deleteSubscription = async (req, res, next) => {
   try {
-    if (req.user.id !== req.params.id && req.user.role !== "admin") {
-      const error = new Error("You are not the owner of this account");
-      error.status = 401; 
-      throw error;
-    }
+    const subscriptionId = normalizeObjectId(req.params.id, "subscription id");
+    const subscription = await Subscription.findOneAndDelete({
+      _id: subscriptionId,
+      user: req.user._id,
+    });
 
-    const deleted = await Subscription.findByIdAndDelete(req.params.id);
-
-    if (!deleted) {
-      const error = new Error("Subscription not found");
-      error.status = 404;
-      throw error;
+    if (!subscription) {
+      throw new HttpError(404, "Subscription not found");
     }
 
     res.status(200).json({
@@ -165,44 +197,11 @@ export const deleteSubscription = async (req, res, next) => {
   }
 };
 
-// ✅ Get Subscriptions for a Specific User
-export const getUserSubscriptions = async (req, res, next) => {
-  try {
-    // Check if the user is the same as the one in the token
-    if (req.user.id !== req.params.id && req.user.role !== "admin") {
-      const error = new Error("You are not the owner of this account");
-      err.status = 401;
-      throw error;
-    }
-    const subscriptions = await Subscription.find({
-      user: req.params.id,
-    });
-
-    res.status(200).json({
-      success: true,
-      data: subscriptions,
-    });
-  } catch (err) {
-    next(err);
-  }
-};
-
-// ✅ Cancel Subscription
 export const cancelSubscription = async (req, res, next) => {
   try {
-    const subscription = await Subscription.findById(req.params.id);
-    if (!subscription) {
-      return res.status(404).json({ message: "Subscription not found" });
-    }
+    const subscriptionId = normalizeObjectId(req.params.id, "subscription id");
+    const subscription = await findOwnSubscription(subscriptionId, req.user._id);
 
-    if (
-      req.user.role !== "admin" &&
-      subscription.user.toString() !== req.user.id
-    ) {
-      return res.status(403).json({ message: "Access denied" });
-    }
-
-    //  Cancel (status update)
     subscription.status = "cancelled";
     await subscription.save();
 
@@ -216,19 +215,17 @@ export const cancelSubscription = async (req, res, next) => {
   }
 };
 
-// ✅ Get Upcoming Renewals
 export const getUpcomingRenewals = async (req, res, next) => {
   try {
     const today = new Date();
     const next7Days = new Date(today);
     next7Days.setDate(today.getDate() + 7);
 
-    const query = req.user.role === "admin" ? {} : { user: req.user._id };
-
     const renewals = await Subscription.find({
-      ...query,
+      user: req.user._id,
+      status: "active",
       renewalDate: { $gte: today, $lte: next7Days },
-    }).populate("user", "name email");
+    }).sort({ renewalDate: 1 });
 
     res.status(200).json({
       success: true,
@@ -239,123 +236,109 @@ export const getUpcomingRenewals = async (req, res, next) => {
   }
 };
 
-// Function that fetches all the Subscriptions
-// ✅ Get All Subscriptions (Admin only)
-
-export const getAllSubscriptions = async (req, res, next) => {
-  try {
-    // // ✅ Only allow admin to fetch all subscriptions
-    // if (req.user.role !== "admin") {
-    //   const error = new Error("Access denied: Admins only");
-    //   error.status = 403;
-    //   throw error;
-    // }
-
-    const allSubscriptions = await Subscription.find().populate(
-      "user",
-      "name email"
-    );
-
-    res.status(200).json({
-      success: true,
-      data: allSubscriptions,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// ✅ SEARCH & FILTER SUBSCRIPTIONS
 export const searchSubscriptions = async (req, res, next) => {
   try {
-    const { 
-      q, // search term
+    ensureOnlyAllowedFields(req.query, [
+      "q",
+      "name",
+      "category",
+      "status",
+      "minPrice",
+      "maxPrice",
+      "startDate",
+      "endDate",
+    ]);
+
+    const {
+      q,
+      name,
       category,
       status,
       minPrice,
       maxPrice,
       startDate,
-      endDate 
+      endDate,
     } = req.query;
-    
-    const userId = req.user._id;
-    
-    // Build query
-    let query = { user: userId };
-    
-    // Search by name
-    if (q) {
-      query.name = { $regex: q, $options: 'i' }; // Case-insensitive search
+
+    const query = { user: req.user._id };
+    const searchTerm = escapeRegex(q || name);
+
+    if (searchTerm) {
+      query.name = { $regex: searchTerm, $options: "i" };
     }
-    
-    // Filter by category
-    if (category) {
-      query.category = category;
-    }
-    
-    // Filter by status
-    if (status) {
-      query.status = status;
-    }
-    
-    // Filter by price range
+
+    if (category) query.category = normalizeEnum(category);
+    if (status) query.status = normalizeEnum(status);
+
     if (minPrice || maxPrice) {
       query.price = {};
-      if (minPrice) query.price.$gte = Number(minPrice);
-      if (maxPrice) query.price.$lte = Number(maxPrice);
+      if (minPrice) query.price.$gte = parseQueryNumber(minPrice, "minPrice");
+      if (maxPrice) query.price.$lte = parseQueryNumber(maxPrice, "maxPrice");
     }
-    
-    // Filter by date range
+
     if (startDate || endDate) {
       query.renewalDate = {};
-      if (startDate) query.renewalDate.$gte = new Date(startDate);
-      if (endDate) query.renewalDate.$lte = new Date(endDate);
+      if (startDate) {
+        query.renewalDate.$gte = parseQueryDate(startDate, "startDate");
+      }
+      if (endDate) {
+        query.renewalDate.$lte = parseQueryDate(endDate, "endDate");
+      }
     }
-    
-    const subscriptions = await Subscription.find(query)
-      .sort({ renewalDate: 1 });
-    
+
+    const subscriptions = await Subscription.find(query).sort({
+      renewalDate: 1,
+    });
+
     res.status(200).json({
       success: true,
       count: subscriptions.length,
-      data: subscriptions
+      data: subscriptions,
     });
   } catch (error) {
     next(error);
   }
 };
 
-// ✅ EXPORT SUBSCRIPTIONS (CSV)
 export const exportSubscriptions = async (req, res, next) => {
   try {
-    const userId = req.user._id;
-    const format = req.query.format || 'csv'; // csv, json, pdf
-    
-    const subscriptions = await Subscription.find({ user: userId });
-    
-    if (format === 'csv') {
-      // Convert to CSV
-      let csv = 'Name,Price,Category,Status,Renewal Date\n';
-      
-      subscriptions.forEach(sub => {
-        csv += `"${sub.name}",${sub.price},${sub.category},${sub.status},"${sub.renewalDate}"\n`;
+    ensureOnlyAllowedFields(req.query, ["format"]);
+
+    const format = normalizeEnum(req.query.format || "csv");
+    const subscriptions = await Subscription.find({ user: req.user._id });
+
+    if (format === "csv") {
+      let csv = "Name,Price,Category,Status,Renewal Date\n";
+
+      subscriptions.forEach((sub) => {
+        const row = [
+          sub.name,
+          sub.price,
+          sub.category,
+          sub.status,
+          sub.renewalDate,
+        ];
+        csv += `${row.map(escapeCsvValue).join(",")}\n`;
       });
-      
-      res.header('Content-Type', 'text/csv');
-      res.attachment('subscriptions.csv');
+
+      res.header("Content-Type", "text/csv");
+      res.attachment("subscriptions.csv");
       return res.send(csv);
     }
-    
-    if (format === 'json') {
-      res.attachment('subscriptions.json');
+
+    if (format === "json") {
+      res.attachment("subscriptions.json");
       return res.json(subscriptions);
     }
-    
-    res.status(400).json({ 
-      success: false, 
-      message: 'Unsupported format. Use csv or json' 
-    });
+
+    throw new HttpError(400, "Unsupported format. Use csv or json");
   } catch (error) {
     next(error);
   }
+};
+
+const escapeCsvValue = (value) => {
+  const stringValue =
+    value === null || value === undefined ? "" : String(value);
+  return `"${stringValue.replace(/"/g, '""')}"`;
 };

@@ -1,5 +1,3 @@
-// automated reminder system
-
 import dayjs from "dayjs";
 
 import { createRequire } from "module";
@@ -8,16 +6,17 @@ const { serve } = require("@upstash/workflow/express");
 
 import Subscription from "../models/subscription.model.js";
 import { sendReminderEmail } from "../utils/send-email.js";
+import { normalizeObjectId } from "../utils/validator.js";
 
-// use in loop
 const REMINDERS = [10, 7, 5, 3, 2, 1];
 
 export const sendReminders = serve(async (context) => {
-  const { subscriptionId } = context.requestPayload;
+  const subscriptionId = normalizeObjectId(
+    context.requestPayload?.subscriptionId,
+    "subscription id",
+  );
   const subscription = await fetchSubscription(context, subscriptionId);
 
-  // if there is no subscription
-  // Exist out of the function
   if (!subscription || subscription.status !== "active") {
     await context.run("log-no-subscription", () => {
       console.log(`No active subscription found for ${subscriptionId}`);
@@ -28,11 +27,9 @@ export const sendReminders = serve(async (context) => {
   const renewalDate = dayjs(subscription.renewalDate);
 
   if (renewalDate.isBefore(dayjs())) {
-    //  dayjs() returns current date and time
-
     await context.run("log-expired", () => {
       console.log(
-        `Renewal Date has passed for Subscription ${subscriptionId}. Stopping workflow`
+        `Renewal Date has passed for Subscription ${subscriptionId}. Stopping workflow`,
       );
     });
 
@@ -49,7 +46,7 @@ export const sendReminders = serve(async (context) => {
       await sleepUntilReminder(
         context,
         `Reminder ${daysBefore} days before`,
-        reminderDate
+        reminderDate,
       );
     }
 
@@ -57,7 +54,7 @@ export const sendReminders = serve(async (context) => {
       await triggerReminder(
         context,
         `${daysBefore} days before reminder`,
-        subscription
+        subscription,
       );
     }
 
@@ -79,7 +76,7 @@ const fetchSubscription = async (context, subscriptionId) => {
 
 const sleepUntilReminder = async (context, label, date) => {
   await context.run(label, () => {
-    console.log(`Sleepiny until ${label} remainder at ${date}`);
+    console.log(`Sleeping until ${label} reminder at ${date}`);
   });
   await context.sleepUntil(label, date.toDate());
 };
