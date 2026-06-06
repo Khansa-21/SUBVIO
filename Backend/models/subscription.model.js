@@ -23,7 +23,6 @@ export const calculateRenewalDate = (startDate, frequency) => {
   return renewalDate;
 };
 
-// Defining subscription schema
 const subscriptionSchema = new mongoose.Schema(
   {
     name: {
@@ -98,8 +97,6 @@ const subscriptionSchema = new mongoose.Schema(
     },
     stripeCheckoutSessionId: {
       type: String,
-      index: true,
-      sparse: true,
     },
   },
   { timestamps: true }
@@ -135,7 +132,7 @@ subscriptionSchema.pre("save", function (next) {
   next();
 });
 
-// creating model of the above schema
+
 const Subscription = mongoose.model("Subscription", subscriptionSchema);
 
 export default Subscription;

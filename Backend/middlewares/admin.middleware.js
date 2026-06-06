@@ -1,9 +1,9 @@
+import HttpError from "../utils/httpError.js";
+
 export function requireAdmin(req, res, next) {
   try {
-    if (req.user.role !== "admin") {
-      const error = new Error("Access denied: Admins only");
-      error.statusCode = 403;
-      throw error;
+    if (req.user?.role !== "admin") {
+      throw new HttpError(403, "Access denied: Admins only");
     }
 
     next();

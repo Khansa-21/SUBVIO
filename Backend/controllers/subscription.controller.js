@@ -12,9 +12,10 @@ import {
 import {
   ensureOnlyAllowedFields,
   escapeRegex,
+  normalizeDate,
   normalizeEnum,
+  normalizeNumber,
   normalizeObjectId,
-  normalizeString,
 } from "../utils/validator.js";
 
 const findOwnSubscription = async (subscriptionId, userId) => {
@@ -28,26 +29,6 @@ const findOwnSubscription = async (subscriptionId, userId) => {
   }
 
   return subscription;
-};
-
-const parseQueryNumber = (value, field) => {
-  const parsed = Number(normalizeString(value));
-
-  if (!Number.isFinite(parsed)) {
-    throw new HttpError(400, `${field} must be a valid number`);
-  }
-
-  return parsed;
-};
-
-const parseQueryDate = (value, field) => {
-  const parsed = new Date(normalizeString(value));
-
-  if (Number.isNaN(parsed.getTime())) {
-    throw new HttpError(400, `${field} must be a valid date`);
-  }
-
-  return parsed;
 };
 
 export const getSubscriptions = async (req, res, next) => {
@@ -272,17 +253,17 @@ export const searchSubscriptions = async (req, res, next) => {
 
     if (minPrice || maxPrice) {
       query.price = {};
-      if (minPrice) query.price.$gte = parseQueryNumber(minPrice, "minPrice");
-      if (maxPrice) query.price.$lte = parseQueryNumber(maxPrice, "maxPrice");
+      if (minPrice) query.price.$gte = normalizeNumber(minPrice, "minPrice");
+      if (maxPrice) query.price.$lte = normalizeNumber(maxPrice, "maxPrice");
     }
 
     if (startDate || endDate) {
       query.renewalDate = {};
       if (startDate) {
-        query.renewalDate.$gte = parseQueryDate(startDate, "startDate");
+        query.renewalDate.$gte = normalizeDate(startDate, "startDate");
       }
       if (endDate) {
-        query.renewalDate.$lte = parseQueryDate(endDate, "endDate");
+        query.renewalDate.$lte = normalizeDate(endDate, "endDate");
       }
     }
 

@@ -1,4 +1,5 @@
 import validator from "validator";
+import HttpError from "./httpError.js";
 
 const CONTROL_CHARS_REGEX = /[\u0000-\u001F\u007F]/g;
 
@@ -22,6 +23,26 @@ export const normalizeEnum = (value, { lowerCase = true } = {}) => {
   return lowerCase ? normalized.toLowerCase() : normalized.toUpperCase();
 };
 
+export const normalizeNumber = (value, field = "number") => {
+  const parsed = Number(normalizeString(value));
+
+  if (!Number.isFinite(parsed)) {
+    throw new HttpError(400, `${field} must be a valid number`);
+  }
+
+  return parsed;
+};
+
+export const normalizeDate = (value, field = "date") => {
+  const date = new Date(normalizeString(value));
+
+  if (Number.isNaN(date.getTime())) {
+    throw new HttpError(400, `${field} must be a valid date`);
+  }
+
+  return date;
+};
+
 export const escapeRegex = (value) => {
   return normalizeString(value, { maxLength: 100 }).replace(
     /[.*+?^${}()|[\]\\]/g,
@@ -33,9 +54,7 @@ export const normalizeObjectId = (value, field = "id") => {
   const normalized = normalizeString(value);
 
   if (!validator.isMongoId(normalized)) {
-    const error = new Error(`Invalid ${field}`);
-    error.statusCode = 400;
-    throw error;
+    throw new HttpError(400, `Invalid ${field}`);
   }
 
   return normalized;
@@ -60,9 +79,13 @@ export const ensureOnlyAllowedFields = (source, allowedFields) => {
   );
 
   if (invalidFields.length) {
-    const error = new Error(`Fields not allowed: ${invalidFields.join(", ")}`);
-    error.statusCode = 400;
-    throw error;
+    throw new HttpError(400, `Fields not allowed: ${invalidFields.join(", ")}`);
+  }
+};
+
+export const assertValid = (validation) => {
+  if (!validation.isValid) {
+    throw new HttpError(400, validation.errors);
   }
 };
 

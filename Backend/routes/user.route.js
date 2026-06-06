@@ -8,10 +8,11 @@ import {
 import { requireAuth } from "../middlewares/auth.middleware.js";
 
 const userRouter = Router();
+userRouter.use(requireAuth);
 
-userRouter.get("/me", requireAuth, getCurrentUser);
-userRouter.patch("/me", requireAuth, updateCurrentUser);
-userRouter.patch("/me/password", requireAuth, updateCurrentUserPassword);
-userRouter.delete("/me", requireAuth, deleteCurrentUser);
+userRouter.get("/me", getCurrentUser);
+userRouter.patch("/me", updateCurrentUser);
+userRouter.patch("/me/password", updateCurrentUserPassword);
+userRouter.delete("/me", deleteCurrentUser);
 
 export default userRouter;

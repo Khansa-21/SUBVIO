@@ -16,7 +16,6 @@ const adminRouter = Router();
 adminRouter.use(requireAuth, requireAdmin);
 
 adminRouter.get("/dashboard", getAdminDashboard);
-adminRouter.get("/analytics/dashboard", getAdminDashboard);
 
 adminRouter.get("/users", getAdminUsers);
 adminRouter.get("/users/:id", getAdminUserById);

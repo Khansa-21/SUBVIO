@@ -1,6 +1,8 @@
 import HttpError from "./httpError.js";
 import {
   normalizeEnum,
+  normalizeDate,
+  normalizeNumber,
   normalizeString,
   pickAllowedFields,
 } from "./validator.js";
@@ -25,7 +27,7 @@ export const buildSubscriptionPayload = (source) => {
   }
 
   if (payload.price !== undefined) {
-    payload.price = Number(payload.price);
+    payload.price = normalizeNumber(payload.price, "price");
   }
 
   if (payload.currency !== undefined) {
@@ -61,16 +63,6 @@ export const buildSubscriptionPayload = (source) => {
   }
 
   return payload;
-};
-
-const normalizeDate = (value, field) => {
-  const date = new Date(normalizeString(value));
-
-  if (Number.isNaN(date.getTime())) {
-    throw new HttpError(400, `${field} must be a valid date`);
-  }
-
-  return date;
 };
 
 export const ensurePositivePrice = (price) => {

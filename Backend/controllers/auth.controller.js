@@ -8,6 +8,7 @@ import {
   sendPasswordResetEmail,
 } from "../utils/send-email.js";
 import {
+  assertValid,
   ensureOnlyAllowedFields,
   normalizeEmail,
   normalizeString,
@@ -36,13 +37,7 @@ export const signUp = async (req, res, next) => {
     const { password } = req.body;
     const email = normalizeEmail(req.body.email);
 
-    const validation = validateSignup(name, email, password);
-    if (!validation.isValid) {
-      return res.status(400).json({
-        success: false,
-        message: validation.errors,
-      });
-    }
+    assertValid(validateSignup(name, email, password));
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -94,13 +89,7 @@ export const logIn = async (req, res, next) => {
     const email = normalizeEmail(req.body.email);
     const { password } = req.body;
 
-    const validation = validateLogin(email, password);
-    if (!validation.isValid) {
-      return res.status(400).json({
-        success: false,
-        message: validation.errors,
-      });
-    }
+    assertValid(validateLogin(email, password));
 
     const user = await User.findOne({ email }).select("+password");
     if (!user) {
@@ -162,15 +151,11 @@ export const forgotPassword = async (req, res, next) => {
     await user.save();
 
     const resetLink = `${APP_URL}/reset-password/${resetToken}`;
-    const emailResult = await sendPasswordResetEmail(
+    await sendPasswordResetEmail(
       user.email,
       user.name,
       resetLink,
     );
-
-    if (!emailResult.success) {
-      console.warn("Password reset email failed:", emailResult.error);
-    }
 
     res.json({
       success: true,
@@ -204,13 +189,7 @@ export const resetPassword = async (req, res, next) => {
     const token = normalizeString(req.params.token);
     const { password } = req.body;
 
-    const validation = validatePassword(password);
-    if (!validation.isValid) {
-      return res.status(400).json({
-        success: false,
-        message: validation.errors,
-      });
-    }
+    assertValid(validatePassword(password));
     const user = await validateResetToken(token);
 
     user.password = await bcrypt.hash(password, 10);
@@ -223,8 +202,11 @@ export const resetPassword = async (req, res, next) => {
       message: "Password updated successfully",
     });
   } catch (error) {
-    error.statusCode = 400;
-    error.message = "Invalid or expired token";
-    next(error);
+    if (error instanceof HttpError) {
+      next(error);
+      return;
+    }
+
+    next(new HttpError(400, "Invalid or expired token"));
   }
 };

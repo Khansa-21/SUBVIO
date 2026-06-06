@@ -5,25 +5,48 @@ import {
   resetPasswordTemplate,
   confirmationTemplate,
 } from "./email-template.js";
-import sgMail, { isEmailConfigured } from "../config/sendgrid.js";
+import { sendBrevoEmail, isEmailConfigured } from "../config/brevo.js";
 import {
   FRONTEND_URL,
-  SENDGRID_FROM_EMAIL,
-  SENDGRID_FROM_NAME,
+  BREVO_FROM_EMAIL,
+  BREVO_FROM_NAME,
 } from "../config/env.js";
 
 const APP_URL = FRONTEND_URL || "http://localhost:3000";
-const FROM_EMAIL = `${SENDGRID_FROM_NAME || "Subvio"} <${SENDGRID_FROM_EMAIL}>`;
+const FROM_EMAIL = {
+  email: BREVO_FROM_EMAIL,
+  name: BREVO_FROM_NAME || "Subvio",
+};
 
 const ensureEmailConfigured = () => {
-  if (!isEmailConfigured || !SENDGRID_FROM_EMAIL) {
-    throw new Error("SendGrid API key or sender email is missing");
+  if (!isEmailConfigured || !BREVO_FROM_EMAIL) {
+    throw new Error("Brevo API key or sender email is missing");
   }
+};
+
+const getEmailErrorMessage = (error) => {
+  const brevoError = error.responseBody;
+  if (brevoError && typeof brevoError === "object") {
+    const details = [brevoError.code, brevoError.message]
+      .filter(Boolean)
+      .join(": ");
+
+    if (details) {
+      return `${error.message}: ${details}`;
+    }
+  }
+
+  return error.message;
 };
 
 const sendMail = async (msg) => {
   ensureEmailConfigured();
-  await sgMail.send({ ...msg, from: FROM_EMAIL });
+  await sendBrevoEmail({
+    sender: FROM_EMAIL,
+    to: msg.to,
+    subject: msg.subject,
+    htmlContent: msg.html,
+  });
 };
 
 export const sendReminderEmail = async ({ to, type, subscription }) => {
@@ -57,9 +80,10 @@ export const sendReminderEmail = async ({ to, type, subscription }) => {
     console.log(`Reminder email sent to ${to} for ${subscription.name}`);
     return { success: true };
   } catch (error) {
-    console.error(`Reminder email failed: ${error.message}`);
-    if (error.response) console.error("SendGrid Error:", error.response.body);
-    return { success: false, error: error.message };
+    const errorMessage = getEmailErrorMessage(error);
+    console.error(`Reminder email failed: ${errorMessage}`);
+    if (error.responseBody) console.error("Brevo Error:", error.responseBody);
+    return { success: false, error: errorMessage };
   }
 };
 
@@ -82,7 +106,7 @@ export const sendSubscriptionConfirmation = async ({
       frequency: subscription.frequency,
       paymentMethod: subscription.paymentMethod || "Credit Card",
       frontendUrl: APP_URL,
-      supportEmail: SENDGRID_FROM_EMAIL,
+      supportEmail: BREVO_FROM_EMAIL,
     });
 
     await sendMail({
@@ -94,9 +118,10 @@ export const sendSubscriptionConfirmation = async ({
     console.log(`Confirmation email sent for ${subscription.name} to ${to}`);
     return { success: true };
   } catch (error) {
-    console.error(`Confirmation email failed: ${error.message}`);
-    if (error.response) console.error("SendGrid Error:", error.response.body);
-    return { success: false, error: error.message };
+    const errorMessage = getEmailErrorMessage(error);
+    console.error(`Confirmation email failed: ${errorMessage}`);
+    if (error.responseBody) console.error("Brevo Error:", error.responseBody);
+    return { success: false, error: errorMessage };
   }
 };
 
@@ -113,9 +138,10 @@ export const sendWelcomeEmail = async (to, userName) => {
     console.log(`Welcome email sent to ${to}`);
     return { success: true };
   } catch (error) {
-    console.error(`Welcome email failed: ${error.message}`);
-    if (error.response) console.error("SendGrid Error:", error.response.body);
-    return { success: false, error: error.message };
+    const errorMessage = getEmailErrorMessage(error);
+    console.error(`Welcome email failed: ${errorMessage}`);
+    if (error.responseBody) console.error("Brevo Error:", error.responseBody);
+    return { success: false, error: errorMessage };
   }
 };
 
@@ -132,8 +158,9 @@ export const sendPasswordResetEmail = async (to, userName, resetLink) => {
     console.log(`Password reset email sent to ${to}`);
     return { success: true };
   } catch (error) {
-    console.error(`Password reset email failed: ${error.message}`);
-    if (error.response) console.error("SendGrid Error:", error.response.body);
-    return { success: false, error: error.message };
+    const errorMessage = getEmailErrorMessage(error);
+    console.error(`Password reset email failed: ${errorMessage}`);
+    if (error.responseBody) console.error("Brevo Error:", error.responseBody);
+    return { success: false, error: errorMessage };
   }
 };

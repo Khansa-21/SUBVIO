@@ -5,6 +5,7 @@ import User from "../models/user.model.js";
 import { clearAuthCookie, publicUser } from "../utils/authHelper.js";
 import HttpError from "../utils/httpError.js";
 import {
+  assertValid,
   ensureOnlyAllowedFields,
   normalizeEmail,
   normalizeString,
@@ -59,10 +60,7 @@ export const updateCurrentUserPassword = async (req, res, next) => {
     ensureOnlyAllowedFields(req.body, ["currentPassword", "password"]);
 
     const { currentPassword, password } = req.body;
-    const validation = validatePassword(password);
-    if (!validation.isValid) {
-      throw new HttpError(400, validation.errors);
-    }
+    assertValid(validatePassword(password));
 
     const user = await User.findById(req.user._id).select("+password");
     if (!user) {

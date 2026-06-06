@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { NODE_ENV } from "../config/env.js";
+import HttpError from "../utils/httpError.js";
 
 const healthRouter = Router();
 
@@ -14,7 +15,7 @@ healthRouter.get("/", (req, res) => {
   });
 });
 
-healthRouter.get("/db", async (req, res) => {
+healthRouter.get("/db", async (req, res, next) => {
   try {
     const mongoose = (await import("mongoose")).default;
     const state = mongoose.connection.readyState;
@@ -32,11 +33,7 @@ healthRouter.get("/db", async (req, res) => {
       readyState: state,
     });
   } catch (error) {
-    res.status(500).json({
-      status: "error",
-      message: "Database check failed",
-      error: error.message,
-    });
+    next(new HttpError(500, "Database check failed", error.message));
   }
 });
 

@@ -13,15 +13,16 @@ import {
 import { requireAuth } from "../middlewares/auth.middleware.js";
 
 const subscriptionRouter = Router();
+subscriptionRouter.use(requireAuth);
 
-subscriptionRouter.get("/", requireAuth, getSubscriptions);
-subscriptionRouter.post("/", requireAuth, createSubscription);
-subscriptionRouter.get("/search/filter", requireAuth, searchSubscriptions);
-subscriptionRouter.get("/export", requireAuth, exportSubscriptions);
-subscriptionRouter.get("/upcoming", requireAuth, getUpcomingRenewals);
-subscriptionRouter.get("/:id", requireAuth, getSubscriptionById);
-subscriptionRouter.patch("/:id", requireAuth, updateSubscription);
-subscriptionRouter.delete("/:id", requireAuth, deleteSubscription);
-subscriptionRouter.patch("/:id/cancel", requireAuth, cancelSubscription);
+subscriptionRouter.get("/", getSubscriptions);
+subscriptionRouter.post("/", createSubscription);
+subscriptionRouter.get("/search/filter", searchSubscriptions);
+subscriptionRouter.get("/export", exportSubscriptions);
+subscriptionRouter.get("/upcoming", getUpcomingRenewals);
+subscriptionRouter.get("/:id", getSubscriptionById);
+subscriptionRouter.patch("/:id", updateSubscription);
+subscriptionRouter.delete("/:id", deleteSubscription);
+subscriptionRouter.patch("/:id/cancel", cancelSubscription);
 
 export default subscriptionRouter;

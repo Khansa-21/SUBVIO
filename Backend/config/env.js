@@ -5,6 +5,7 @@ export const {
   PORT,
   NODE_ENV,
   DB_URI,
+  DNS_SERVERS,
   JWT_SECRET,
   JWT_EXPIRES_IN,
   ARCJET_KEY,
@@ -14,9 +15,9 @@ export const {
   SERVER_URL,
   STRIPE_SECRET_KEY,
   FRONTEND_URL,
-  SENDGRID_API_KEY,
-  SENDGRID_FROM_EMAIL,
-  SENDGRID_FROM_NAME,
+  BREVO_API_KEY,
+  BREVO_FROM_EMAIL,
+  BREVO_FROM_NAME,
 } = process.env;
 
 // export const isDevelopment = process.env.NODE_ENV === "development";

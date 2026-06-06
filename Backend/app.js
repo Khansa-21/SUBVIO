@@ -1,8 +1,10 @@
 import express from "express";
 import cookieParser from "cookie-parser";
+import swaggerUi from "swagger-ui-express";
 import { PORT, FRONTEND_URL } from "./config/env.js";
+import swaggerDocument, { swaggerUiOptions } from "./config/swagger.js";
 
-// Importing Multiple Routes
+// Importing Routes
 import authRouter from "./routes/auth.route.js";
 import adminRouter from "./routes/admin.route.js";
 import userRouter from "./routes/user.route.js";
@@ -42,6 +44,17 @@ app.use(
 
 // Arcjet Middleware
 app.use(arcjetMiddleware);
+
+// API documentation
+app.get("/api-docs.json", (req, res) => {
+  res.setHeader("Content-Type", "application/json");
+  res.send(swaggerDocument);
+});
+app.use(
+  "/api-docs",
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerDocument, swaggerUiOptions),
+);
 
 // Using Routes
 app.use("/api/v-1/auth", authRouter);

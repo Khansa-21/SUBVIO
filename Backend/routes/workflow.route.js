@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { sendReminders } from "../controllers/workflow.controller.js";
 import { QSTASH_TOKEN } from "../config/env.js";
+import HttpError from "../utils/httpError.js";
 
 const workflowRouter = Router();
 
@@ -8,10 +9,7 @@ const verifyWorkflowToken = (req, res, next) => {
   const token = req.headers["x-workflow-token"];
 
   if (!QSTASH_TOKEN || token !== QSTASH_TOKEN) {
-    return res.status(401).json({
-      success: false,
-      message: "Unauthorized workflow request",
-    });
+    throw new HttpError(401, "Unauthorized workflow request");
   }
 
   next();
