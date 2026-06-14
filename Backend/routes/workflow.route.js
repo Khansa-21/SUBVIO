@@ -9,10 +9,10 @@ const verifyWorkflowToken = (req, res, next) => {
   const token = req.headers["x-workflow-token"];
 
   if (!QSTASH_TOKEN || token !== QSTASH_TOKEN) {
-    throw new HttpError(401, "Unauthorized workflow request");
+    return next(new HttpError(401, "Unauthorized workflow request"));
   }
 
-  next();
+  return next();
 };
 
 workflowRouter.post("/subscription/reminder", verifyWorkflowToken, sendReminders);

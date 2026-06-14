@@ -1,7 +1,11 @@
 const errorMiddleware = (err, req, res, next) => {
+  if (res.headersSent) {
+    return next(err);
+  }
+
   if (process.env.NODE_ENV === "development") {
     console.error(err.stack);
-  } 
+  }
 
   let statusCode = err.statusCode || err.status || 500;
   let message = err.message || "Server Error";
@@ -16,7 +20,7 @@ const errorMiddleware = (err, req, res, next) => {
   if (err.code === 11000) {
     statusCode = 409;
     message = `Duplicate value for field: ${Object.keys(err.keyValue).join(
-      ","
+      ",",
     )}`;
   }
 

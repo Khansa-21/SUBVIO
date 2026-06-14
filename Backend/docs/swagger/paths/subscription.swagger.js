@@ -133,6 +133,7 @@ export const subscriptionPaths = {
         400: commonErrors.BadRequest,
         401: commonErrors.Unauthorized,
         404: commonErrors.NotFound,
+        409: commonErrors.Conflict,
         500: commonErrors.ServerError,
       },
     },

@@ -6,10 +6,10 @@ import {
   signOut,
   forgotPassword,
   resetPassword,
-  verifyResetToken
+  verifyResetToken,
 } from "../controllers/auth.controller.js";
 
-import {requireAuth} from "../middlewares/auth.middleware.js";
+import requireAuth from "../middlewares/auth.middleware.js";
 const authRouter = Router();
 
 // Routes

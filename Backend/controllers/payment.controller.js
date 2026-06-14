@@ -5,7 +5,8 @@ import HttpError from "../utils/httpError.js";
 import {
   buildSubscriptionPayload,
   ensurePositivePrice,
-} from "../utils/subscriptionPayload.js";
+  userHasSubscriptionNamed,
+} from "../services/subscription.service.js";
 import {
   ensureOnlyAllowedFields,
   normalizeString,
@@ -20,7 +21,6 @@ const checkoutFields = [
   "currency",
   "frequency",
   "category",
-  "paymentMethod",
   "startDate",
   "renewalDate",
 ];
@@ -69,12 +69,8 @@ export const createCheckoutSession = async (req, res, next) => {
       );
     }
 
-    const existing = await Subscription.findOne({
-      user: req.user._id,
-      name: payload.name,
-    });
-    if (existing) {
-      throw new HttpError(400, "Subscription already exists for this user");
+    if (await userHasSubscriptionNamed(req.user._id, payload.name)) {
+      throw new HttpError(409, "Subscription already exists for this user");
     }
 
     const session = await stripeClient.checkout.sessions.create({
@@ -129,17 +125,13 @@ export const verifyCheckoutSession = async (req, res, next) => {
     const payload = buildSubscriptionPayload(session.metadata || {});
     ensurePositivePrice(payload.price);
 
-    const duplicate = await Subscription.findOne({
-      user: req.user._id,
-      name: payload.name,
-    });
-    if (duplicate) {
-      throw new HttpError(400, "Subscription already exists for this user");
+    if (await userHasSubscriptionNamed(req.user._id, payload.name)) {
+      throw new HttpError(409, "Subscription already exists for this user");
     }
 
     const subscription = await Subscription.create({
       ...payload,
-      paymentMethod: payload.paymentMethod || "Stripe",
+      paymentMethod: "Stripe",
       status: "active",
       user: req.user._id,
       stripeCheckoutSessionId: session.id,

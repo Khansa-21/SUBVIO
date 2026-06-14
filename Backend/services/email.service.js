@@ -4,7 +4,7 @@ import {
   welcomeEmailTemplate,
   resetPasswordTemplate,
   confirmationTemplate,
-} from "./email-template.js";
+} from "../utils/email-template.js";
 import { sendBrevoEmail, isEmailConfigured } from "../config/brevo.js";
 import {
   FRONTEND_URL,

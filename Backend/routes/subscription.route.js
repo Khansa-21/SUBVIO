@@ -10,7 +10,7 @@ import {
   searchSubscriptions,
   updateSubscription,
 } from "../controllers/subscription.controller.js";
-import { requireAuth } from "../middlewares/auth.middleware.js";
+import requireAuth from "../middlewares/auth.middleware.js";
 
 const subscriptionRouter = Router();
 subscriptionRouter.use(requireAuth);

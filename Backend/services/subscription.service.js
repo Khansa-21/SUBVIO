@@ -1,11 +1,12 @@
-import HttpError from "./httpError.js";
+import Subscription from "../models/subscription.model.js";
+import HttpError from "../utils/httpError.js";
 import {
   normalizeEnum,
   normalizeDate,
   normalizeNumber,
   normalizeString,
   pickAllowedFields,
-} from "./validator.js";
+} from "../utils/validator.js";
 
 export const subscriptionFields = [
   "name",
@@ -69,4 +70,31 @@ export const ensurePositivePrice = (price) => {
   if (price !== undefined && (!Number.isFinite(Number(price)) || price <= 0)) {
     throw new HttpError(400, "Price must be greater than 0");
   }
+};
+
+export const findSubscriptionByUserAndName = (userId, name, excludeId) => {
+  const query = { user: userId, name };
+
+  if (excludeId) {
+    query._id = { $ne: excludeId };
+  }
+
+  return Subscription.findOne(query);
+};
+
+export const userHasSubscriptionNamed = async (userId, name, excludeId) => {
+  return Boolean(await findSubscriptionByUserAndName(userId, name, excludeId));
+};
+
+export const findOwnSubscription = async (subscriptionId, userId) => {
+  const subscription = await Subscription.findOne({
+    _id: subscriptionId,
+    user: userId,
+  });
+
+  if (!subscription) {
+    throw new HttpError(404, "Subscription not found");
+  }
+
+  return subscription;
 };

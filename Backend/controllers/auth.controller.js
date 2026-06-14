@@ -6,7 +6,7 @@ import { JWT_SECRET, FRONTEND_URL } from "../config/env.js";
 import {
   sendWelcomeEmail,
   sendPasswordResetEmail,
-} from "../utils/send-email.js";
+} from "../services/email.service.js";
 import {
   assertValid,
   ensureOnlyAllowedFields,

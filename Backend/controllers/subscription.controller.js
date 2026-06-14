@@ -3,12 +3,14 @@ import { workflowClient, isWorkflowConfigured } from "../config/upstash.js";
 import Subscription from "../models/subscription.model.js";
 import User from "../models/user.model.js";
 import HttpError from "../utils/httpError.js";
-import { sendSubscriptionConfirmation } from "../utils/send-email.js";
+import { sendSubscriptionConfirmation } from "../services/email.service.js";
 import {
   buildSubscriptionPayload,
   ensurePositivePrice,
+  findOwnSubscription,
   subscriptionFields,
-} from "../utils/subscriptionPayload.js";
+  userHasSubscriptionNamed,
+} from "../services/subscription.service.js";
 import {
   ensureOnlyAllowedFields,
   escapeRegex,
@@ -18,19 +20,6 @@ import {
   normalizeObjectId,
 } from "../utils/validator.js";
 
-const findOwnSubscription = async (subscriptionId, userId) => {
-  const subscription = await Subscription.findOne({
-    _id: subscriptionId,
-    user: userId,
-  });
-
-  if (!subscription) {
-    throw new HttpError(404, "Subscription not found");
-  }
-
-  return subscription;
-};
-
 export const getSubscriptions = async (req, res, next) => {
   try {
     const subscriptions = await Subscription.find({ user: req.user._id }).sort({
@@ -39,6 +28,7 @@ export const getSubscriptions = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
+      count: subscriptions.length,
       data: subscriptions,
     });
   } catch (error) {
@@ -54,12 +44,8 @@ export const createSubscription = async (req, res, next) => {
     const payload = buildSubscriptionPayload(req.body);
     ensurePositivePrice(payload.price);
 
-    const existing = await Subscription.findOne({
-      user: userId,
-      name: payload.name,
-    });
-    if (existing) {
-      throw new HttpError(400, "Subscription already exists for this user");
+    if (await userHasSubscriptionNamed(userId, payload.name)) {
+      throw new HttpError(409, "Subscription already exists for this user");
     }
 
     const subscription = await Subscription.create({
@@ -135,14 +121,14 @@ export const updateSubscription = async (req, res, next) => {
     const subscriptionId = normalizeObjectId(req.params.id, "subscription id");
 
     if (updates.name !== undefined) {
-      const existing = await Subscription.findOne({
-        _id: { $ne: subscriptionId },
-        user: req.user._id,
-        name: updates.name,
-      });
-
-      if (existing) {
-        throw new HttpError(400, "Subscription already exists for this user");
+      if (
+        await userHasSubscriptionNamed(
+          req.user._id,
+          updates.name,
+          subscriptionId,
+        )
+      ) {
+        throw new HttpError(409, "Subscription already exists for this user");
       }
     }
 

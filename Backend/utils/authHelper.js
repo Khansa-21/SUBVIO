@@ -50,7 +50,13 @@ export const clearAuthCookie = (res) => {
 };
 
 export const getAuthTokenFromRequest = (req) => {
-  return req.cookies?.[AUTH_COOKIE_NAME];
+  const cookieToken = req.cookies?.[AUTH_COOKIE_NAME];
+  const authHeader = req.headers?.authorization;
+  const bearerToken = authHeader?.startsWith("Bearer ")
+    ? authHeader.slice(7)
+    : null;
+
+  return cookieToken || bearerToken;
 };
 
 export const publicUser = (user) => {

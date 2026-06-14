@@ -1,9 +1,12 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
-import Subscription from "../models/subscription.model.js";
 import User from "../models/user.model.js";
 import { clearAuthCookie, publicUser } from "../utils/authHelper.js";
 import HttpError from "../utils/httpError.js";
+import {
+  deleteUserAndSubscriptions,
+  isTransactionUnsupported,
+} from "../services/user.service.js";
 import {
   assertValid,
   ensureOnlyAllowedFields,
@@ -93,16 +96,18 @@ export const deleteCurrentUser = async (req, res, next) => {
 
   try {
     session = await mongoose.startSession();
-    let user;
 
-    await session.withTransaction(async () => {
-      await Subscription.deleteMany({ user: req.user._id }).session(session);
-
-      user = await User.findByIdAndDelete(req.user._id).session(session);
-      if (!user) {
-        throw new HttpError(404, "User not found");
+    try {
+      await session.withTransaction(() =>
+        deleteUserAndSubscriptions(req.user._id, session),
+      );
+    } catch (transactionError) {
+      if (!isTransactionUnsupported(transactionError)) {
+        throw transactionError;
       }
-    });
+
+      await deleteUserAndSubscriptions(req.user._id);
+    }
 
     clearAuthCookie(res);
 

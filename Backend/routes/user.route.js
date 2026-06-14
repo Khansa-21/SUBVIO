@@ -5,7 +5,7 @@ import {
   updateCurrentUser,
   updateCurrentUserPassword,
 } from "../controllers/user.controller.js";
-import { requireAuth } from "../middlewares/auth.middleware.js";
+import requireAuth from "../middlewares/auth.middleware.js";
 
 const userRouter = Router();
 userRouter.use(requireAuth);

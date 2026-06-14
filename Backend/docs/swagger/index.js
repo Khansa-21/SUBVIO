@@ -1,4 +1,5 @@
 import { adminPaths } from "./paths/admin.swagger.js";
+import { actionCenterPaths } from "./paths/action-center.swagger.js";
 import { analyticsPaths } from "./paths/analytics.swagger.js";
 import { authPaths } from "./paths/auth.swagger.js";
 import { healthPaths } from "./paths/health.swagger.js";
@@ -31,6 +32,7 @@ export const swaggerDocument = {
     { name: "Users", description: "Current user profile management" },
     { name: "Subscriptions", description: "Subscription CRUD and exports" },
     { name: "Payments", description: "Stripe checkout and verification" },
+    { name: "Action Center", description: "Important user actions and insights" },
     { name: "Analytics", description: "User analytics" },
     { name: "Admin", description: "Admin-only management APIs" },
     { name: "Health", description: "Service health checks" },
@@ -58,6 +60,7 @@ export const swaggerDocument = {
     ...userPaths,
     ...subscriptionPaths,
     ...paymentPaths,
+    ...actionCenterPaths,
     ...analyticsPaths,
     ...adminPaths,
     ...healthPaths,

@@ -205,7 +205,6 @@ export const schemas = {
         example: "monthly",
       },
       category: { type: "string", example: "entertainment" },
-      paymentMethod: { type: "string", example: "Stripe" },
       startDate: { type: "string", format: "date", example: "2026-05-01" },
       renewalDate: { type: "string", format: "date", example: "2026-06-01" },
     },
@@ -264,6 +263,95 @@ export const schemas = {
               },
             },
             totalSpend: { type: "number", example: 45.98 },
+          },
+        },
+      },
+    },
+  },
+  ActionCenterResponse: {
+    type: "object",
+    properties: {
+      success: { type: "boolean", example: true },
+      data: {
+        type: "object",
+        properties: {
+          summary: {
+            type: "object",
+            properties: {
+              totalSubscriptions: { type: "number", example: 6 },
+              activeSubscriptions: { type: "number", example: 5 },
+              estimatedMonthlySpend: { type: "number", example: 79.97 },
+              upcomingRenewalsCount: { type: "number", example: 2 },
+              overdueRenewalsCount: { type: "number", example: 0 },
+            },
+          },
+          upcomingRenewals: {
+            type: "object",
+            properties: {
+              next7Days: {
+                type: "array",
+                items: { $ref: "#/components/schemas/ActionRenewalItem" },
+              },
+              next30Days: {
+                type: "array",
+                items: { $ref: "#/components/schemas/ActionRenewalItem" },
+              },
+            },
+          },
+          overdueRenewals: {
+            type: "array",
+            items: { $ref: "#/components/schemas/ActionRenewalItem" },
+          },
+          savingsOpportunities: {
+            type: "array",
+            items: { $ref: "#/components/schemas/SavingsOpportunity" },
+          },
+          categoryReviews: {
+            type: "array",
+            items: { $ref: "#/components/schemas/CategoryReview" },
+          },
+        },
+      },
+    },
+  },
+  ActionRenewalItem: {
+    type: "object",
+    properties: {
+      _id: { type: "string", example: "665f1b9a4f9b2a001f0c4567" },
+      name: { type: "string", example: "Netflix" },
+      price: { type: "number", example: 15.99 },
+      currency: { type: "string", example: "USD" },
+      frequency: { type: "string", example: "monthly" },
+      category: { type: "string", example: "entertainment" },
+      renewalDate: { type: "string", format: "date-time" },
+      daysUntilRenewal: { type: "number", example: 5 },
+    },
+  },
+  SavingsOpportunity: {
+    type: "object",
+    properties: {
+      _id: { type: "string", example: "665f1b9a4f9b2a001f0c4567" },
+      name: { type: "string", example: "Netflix" },
+      category: { type: "string", example: "entertainment" },
+      monthlyValue: { type: "number", example: 15.99 },
+      renewalDate: { type: "string", format: "date-time" },
+      reason: { type: "string", example: "Top monthly cost" },
+    },
+  },
+  CategoryReview: {
+    type: "object",
+    properties: {
+      category: { type: "string", example: "entertainment" },
+      count: { type: "number", example: 3 },
+      estimatedMonthlySpend: { type: "number", example: 49.97 },
+      subscriptions: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            _id: { type: "string", example: "665f1b9a4f9b2a001f0c4567" },
+            name: { type: "string", example: "Netflix" },
+            monthlyValue: { type: "number", example: 15.99 },
           },
         },
       },

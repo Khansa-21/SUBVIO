@@ -18,6 +18,7 @@ export const paymentPaths = {
         200: ok("Checkout session created", "#/components/schemas/CheckoutResponse"),
         400: commonErrors.BadRequest,
         401: commonErrors.Unauthorized,
+        409: commonErrors.Conflict,
         503: {
           description: "Stripe is not configured",
           content: {
@@ -42,6 +43,7 @@ export const paymentPaths = {
         400: commonErrors.BadRequest,
         401: commonErrors.Unauthorized,
         403: commonErrors.Forbidden,
+        409: commonErrors.Conflict,
         500: commonErrors.ServerError,
       },
     },

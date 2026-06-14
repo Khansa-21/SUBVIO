@@ -112,6 +112,21 @@ export const adminPaths = {
       },
     },
   },
+  "/admin/users/{id}/subscriptions": {
+    get: {
+      tags: ["Admin"],
+      summary: "List subscriptions for a user",
+      security: authSecurity,
+      parameters: [userId],
+      responses: {
+        200: ok("User subscriptions", "#/components/schemas/SubscriptionListResponse"),
+        401: commonErrors.Unauthorized,
+        403: commonErrors.Forbidden,
+        404: commonErrors.NotFound,
+        500: commonErrors.ServerError,
+      },
+    },
+  },
   "/admin/subscriptions": {
     get: {
       tags: ["Admin"],
@@ -126,6 +141,19 @@ export const adminPaths = {
     },
   },
   "/admin/subscriptions/{id}": {
+    get: {
+      tags: ["Admin"],
+      summary: "Get any subscription by id",
+      security: authSecurity,
+      parameters: [subscriptionId],
+      responses: {
+        200: ok("Subscription details", "#/components/schemas/SubscriptionEnvelope"),
+        401: commonErrors.Unauthorized,
+        403: commonErrors.Forbidden,
+        404: commonErrors.NotFound,
+        500: commonErrors.ServerError,
+      },
+    },
     delete: {
       tags: ["Admin"],
       summary: "Delete any subscription by id",
@@ -133,6 +161,21 @@ export const adminPaths = {
       parameters: [subscriptionId],
       responses: {
         200: ok("Subscription deleted", "#/components/schemas/MessageResponse"),
+        401: commonErrors.Unauthorized,
+        403: commonErrors.Forbidden,
+        404: commonErrors.NotFound,
+        500: commonErrors.ServerError,
+      },
+    },
+  },
+  "/admin/subscriptions/{id}/cancel": {
+    patch: {
+      tags: ["Admin"],
+      summary: "Cancel any subscription by id",
+      security: authSecurity,
+      parameters: [subscriptionId],
+      responses: {
+        200: ok("Subscription cancelled", "#/components/schemas/SubscriptionEnvelope"),
         401: commonErrors.Unauthorized,
         403: commonErrors.Forbidden,
         404: commonErrors.NotFound,

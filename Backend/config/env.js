@@ -20,4 +20,4 @@ export const {
   BREVO_FROM_NAME,
 } = process.env;
 
-// export const isDevelopment = process.env.NODE_ENV === "development";
+
