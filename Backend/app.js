@@ -12,6 +12,7 @@ import subscriptionRouter from "./routes/subscription.route.js";
 import workflowRouter from "./routes/workflow.route.js";
 import analyticsRouter from "./routes/analytics.route.js";
 import actionCenterRouter from "./routes/action-center.route.js";
+import smartImportRouter from "./routes/smart-import.route.js";
 import paymentRouter from "./routes/payment.route.js";
 import healthRouter from "./routes/health.route.js";
 
@@ -65,6 +66,7 @@ app.use("/api/v-1/subscription", subscriptionRouter);
 app.use("/api/v-1/workflows", workflowRouter);
 app.use("/api/v-1/analytics", analyticsRouter);
 app.use("/api/v-1/action-center", actionCenterRouter);
+app.use("/api/v-1/smart-import", smartImportRouter);
 app.use("/api/v-1/payment", paymentRouter);
 app.use("/api/v-1/health", healthRouter);
 

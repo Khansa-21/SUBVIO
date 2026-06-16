@@ -364,6 +364,51 @@ export const schemas = {
       data: { type: "object" },
     },
   },
+  SmartImportCandidate: {
+    type: "object",
+    properties: {
+      _id: { type: "string", example: "665f1b9a4f9b2a001f0c4567" },
+      importStatus: { type: "string", example: "pending" },
+      duplicate: { type: "boolean", example: false },
+      rawSource: { type: "string", example: "Netflix, 15.99, monthly" },
+      issues: {
+        type: "array",
+        items: { type: "string" },
+      },
+      payload: { $ref: "#/components/schemas/SubscriptionInput" },
+    },
+  },
+  SmartImportEnvelope: {
+    type: "object",
+    properties: {
+      success: { type: "boolean", example: true },
+      data: { $ref: "#/components/schemas/SmartImportCandidate" },
+    },
+  },
+  SmartImportListResponse: {
+    type: "object",
+    properties: {
+      success: { type: "boolean", example: true },
+      count: { type: "number", example: 1 },
+      data: {
+        type: "array",
+        items: { $ref: "#/components/schemas/SmartImportCandidate" },
+      },
+    },
+  },
+  SmartImportConfirmResponse: {
+    type: "object",
+    properties: {
+      success: { type: "boolean", example: true },
+      data: {
+        type: "object",
+        properties: {
+          candidate: { $ref: "#/components/schemas/SmartImportCandidate" },
+          subscription: { $ref: "#/components/schemas/Subscription" },
+        },
+      },
+    },
+  },
   HealthResponse: {
     type: "object",
     properties: {

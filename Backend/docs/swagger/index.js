@@ -4,6 +4,7 @@ import { analyticsPaths } from "./paths/analytics.swagger.js";
 import { authPaths } from "./paths/auth.swagger.js";
 import { healthPaths } from "./paths/health.swagger.js";
 import { paymentPaths } from "./paths/payment.swagger.js";
+import { smartImportPaths } from "./paths/smart-import.swagger.js";
 import { subscriptionPaths } from "./paths/subscription.swagger.js";
 import { userPaths } from "./paths/user.swagger.js";
 import { workflowPaths } from "./paths/workflow.swagger.js";
@@ -15,7 +16,7 @@ export const swaggerDocument = {
     title: "Subscription Tracker API",
     version: "1.0.0",
     description:
-      "API documentation for authentication, subscriptions, payments, analytics, admin, health checks, and workflows.",
+      "API documentation for authentication, subscriptions, smart import, payments, analytics, admin, health checks, and workflows.",
   },
   servers: [
     {
@@ -33,6 +34,7 @@ export const swaggerDocument = {
     { name: "Subscriptions", description: "Subscription CRUD and exports" },
     { name: "Payments", description: "Stripe checkout and verification" },
     { name: "Action Center", description: "Important user actions and insights" },
+    { name: "Smart Import", description: "Import review queue for subscriptions" },
     { name: "Analytics", description: "User analytics" },
     { name: "Admin", description: "Admin-only management APIs" },
     { name: "Health", description: "Service health checks" },
@@ -61,6 +63,7 @@ export const swaggerDocument = {
     ...subscriptionPaths,
     ...paymentPaths,
     ...actionCenterPaths,
+    ...smartImportPaths,
     ...analyticsPaths,
     ...adminPaths,
     ...healthPaths,

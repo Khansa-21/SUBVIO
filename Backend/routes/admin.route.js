@@ -21,8 +21,8 @@ adminRouter.use(requireAuth, requireAdmin);
 adminRouter.get("/dashboard", getAdminDashboard);
 
 adminRouter.get("/users", getAdminUsers);
-adminRouter.get("/users/:id", getAdminUserById);
 adminRouter.get("/users/:id/subscriptions", getAdminUserSubscriptions);
+adminRouter.get("/users/:id", getAdminUserById);
 adminRouter.patch("/users/:id/role", updateAdminUserRole);
 adminRouter.delete("/users/:id", deleteAdminUser);
 

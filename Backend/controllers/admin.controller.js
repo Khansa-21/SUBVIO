@@ -268,8 +268,9 @@ export const getAdminDashboard = async (req, res, next) => {
       totalUsers,
       totalSubscriptions,
       activeSubscriptions,
-      canceledSubscriptions,
-      activeUserIds,
+      cancelledSubscriptions,
+      expiredSubscriptions,
+      usersWithActiveSubscriptions,
       subscriptions,
       upcomingRenewals,
       popularCategories,
@@ -280,8 +281,10 @@ export const getAdminDashboard = async (req, res, next) => {
       previousSubscriptions,
       currentActiveSubscriptions,
       previousActiveSubscriptions,
-      currentCanceledSubscriptions,
-      previousCanceledSubscriptions,
+      currentCancelledSubscriptions,
+      previousCancelledSubscriptions,
+      currentExpiredSubscriptions,
+      previousExpiredSubscriptions,
       userGrowthRows,
       subscriptionGrowthRows,
     ] = await Promise.all([
@@ -289,6 +292,7 @@ export const getAdminDashboard = async (req, res, next) => {
       Subscription.countDocuments(),
       Subscription.countDocuments({ status: "active" }),
       Subscription.countDocuments({ status: "cancelled" }),
+      Subscription.countDocuments({ status: "expired" }),
       Subscription.distinct("user", { status: "active" }),
       Subscription.find({ status: "active" }),
       Subscription.find({
@@ -333,6 +337,14 @@ export const getAdminDashboard = async (req, res, next) => {
         status: "cancelled",
         createdAt: { $gte: previousPeriodStart, $lt: currentPeriodStart },
       }),
+      Subscription.countDocuments({
+        status: "expired",
+        createdAt: { $gte: currentPeriodStart },
+      }),
+      Subscription.countDocuments({
+        status: "expired",
+        createdAt: { $gte: previousPeriodStart, $lt: currentPeriodStart },
+      }),
       User.aggregate(getGrowthPipeline(growthStart)),
       Subscription.aggregate(getGrowthPipeline(growthStart)),
     ]);
@@ -348,15 +360,15 @@ export const getAdminDashboard = async (req, res, next) => {
       users: currentUsers,
       subscriptions: currentSubscriptions,
       activeSubscriptions: currentActiveSubscriptions,
-      canceledSubscriptions: currentCanceledSubscriptions,
-      cancelledSubscriptions: currentCanceledSubscriptions,
+      cancelledSubscriptions: currentCancelledSubscriptions,
+      expiredSubscriptions: currentExpiredSubscriptions,
     };
     const previousPeriodStats = {
       users: previousUsers,
       subscriptions: previousSubscriptions,
       activeSubscriptions: previousActiveSubscriptions,
-      canceledSubscriptions: previousCanceledSubscriptions,
-      cancelledSubscriptions: previousCanceledSubscriptions,
+      cancelledSubscriptions: previousCancelledSubscriptions,
+      expiredSubscriptions: previousExpiredSubscriptions,
     };
     const deltas = {
       users: getDelta(currentUsers, previousUsers),
@@ -365,13 +377,13 @@ export const getAdminDashboard = async (req, res, next) => {
         currentActiveSubscriptions,
         previousActiveSubscriptions,
       ),
-      canceledSubscriptions: getDelta(
-        currentCanceledSubscriptions,
-        previousCanceledSubscriptions,
-      ),
       cancelledSubscriptions: getDelta(
-        currentCanceledSubscriptions,
-        previousCanceledSubscriptions,
+        currentCancelledSubscriptions,
+        previousCancelledSubscriptions,
+      ),
+      expiredSubscriptions: getDelta(
+        currentExpiredSubscriptions,
+        previousExpiredSubscriptions,
       ),
     };
 
@@ -379,12 +391,12 @@ export const getAdminDashboard = async (req, res, next) => {
       success: true,
       data: {
         totalUsers,
-        activeUsers: activeUserIds.length,
+        usersWithActiveSubscriptions: usersWithActiveSubscriptions.length,
         totalSubscriptions,
         subscriptionsByStatus: {
           active: activeSubscriptions,
-          canceled: canceledSubscriptions,
-          cancelled: canceledSubscriptions,
+          cancelled: cancelledSubscriptions,
+          expired: expiredSubscriptions,
         },
         monthlyRecurringRevenue: roundMoney(monthlyRecurringRevenue),
         growth,
